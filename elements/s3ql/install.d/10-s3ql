@@ -1,0 +1,58 @@
+#!/bin/sh
+
+set -e
+set -o xtrace
+
+
+distro=$(lsb_release -is || :)
+if [ ! "$distro" == "RedHatEnterpriseServer" -a ! "$distro" == "CentOS" ]; then
+    echo "Unknown distro: $distro. Only support centos now. Exiting."
+    exit 1
+fi
+
+#install python 3
+install-packages gcc-c++.x86_64 make.x86_64 libattr-devel.x86_64 fuse-libs.x86_64 fuse-devel.x86_64 fuse.x86_64 bzip2.x86_64 unzip.x86_64 xz-libs.x86_64 xz-devel.x86_64 xz.x86_64 libffi
+#????
+yum groupinstall -y development
+
+#download python 3
+cd /temp
+install-packages wget
+wget https://www.python.org/ftp/python/3.4.2/Python-3.4.2.tgz
+tar xvzf Python-3.4.2.tgz
+
+#build
+cd Python-3.4.2
+./configure LDFLAGS="-Wl,-rpath /usr/local/lib" \
+            --enable-shared \
+            --with-system-ffi \
+            --with-pydebug \
+            --with-bz2
+make
+sudo make install
+sudo ln -s /usr/local/bin/python3 /usr/bin/python3
+
+#install SQLite
+cd /temp
+wget http://www.sqlite.org/2014/sqlite-autoconf-3080702.tar.gz
+tar xvzf sqlite-autoconf-3080702.tar.gz
+cd sqlite-autoconf-3080702
+./configure
+make
+sudo make install
+
+#Install required python packages
+sudo /usr/local/bin/pip3 install apsw
+sudo /usr/local/bin/pip3 install argparse
+sudo /usr/local/bin/pip3 install llfuse
+sudo /usr/local/bin/pip3 install dugong
+sudo /usr/local/bin/pip3 install defusedxml
+sudo /usr/local/bin/pip3 install requests
+sudo /usr/local/bin/pip3 install pycrypto
+
+#install s3ql
+cd /temp
+wget https://bitbucket.org/nikratio/s3ql/downloads/s3ql-2.12.tar.bz2
+tar xjvf s3ql-2.12.tar.bz2
+cd s3ql-2.12
+python3 setup.py install
